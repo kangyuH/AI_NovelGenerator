@@ -149,6 +149,8 @@ class GrokSupportTests(unittest.TestCase):
         self.assertEqual(data["llm_configs"]["Grok 4.20"]["base_url"], "https://api.x.ai/v1")
         self.assertEqual(data["llm_configs"]["Grok 4.20"]["model_name"], "grok-4.20")
         self.assertEqual(data["llm_configs"]["Grok 4.20"]["interface_format"], "Grok")
+        self.assertEqual(data["embedding_configs"]["Local Hashing"]["model_name"], "local-hashing")
+        self.assertEqual(data["embedding_configs"]["Local Hashing"]["interface_format"], "Local Hashing")
         self.assertEqual(data["choose_configs"]["prompt_draft_llm"], "DeepSeek V3")
         self.assertEqual(data["choose_configs"]["final_chapter_llm"], "GPT 5")
 

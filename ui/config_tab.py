@@ -1,49 +1,26 @@
 # ui/config_tab.py
 # -*- coding: utf-8 -*-
 from tkinter import messagebox
-import uuid
-import datetime
 
 import customtkinter as ctk
 
-from config_manager import load_config, save_config
+from config_manager import (
+    EMBEDDING_INTERFACE_OPTIONS,
+    GROK_DEFAULT_BASE_URL,
+    GROK_DEFAULT_MODEL,
+    LLM_INTERFACE_OPTIONS,
+    LOCAL_HASHING_EMBEDDING_INTERFACE,
+    OPENAI_DEFAULT_BASE_URLS,
+    OPENAI_DEFAULT_MODELS,
+    build_default_llm_configs,
+    get_default_embedding_config,
+    load_config,
+    normalize_embedding_interface,
+    save_config,
+)
 from tooltips import tooltips
 
 import os
-
-
-LLM_INTERFACE_OPTIONS = ["OpenAI", "Azure OpenAI", "Ollama", "DeepSeek", "Gemini", "ML Studio", "Grok"]
-GROK_DEFAULT_BASE_URL = "https://api.x.ai/v1"
-GROK_DEFAULT_MODEL = "grok-4.20"
-OPENAI_DEFAULT_BASE_URLS = {"", "https://api.openai.com", "https://api.openai.com/v1"}
-OPENAI_DEFAULT_MODELS = {"", "gpt-4", "gpt-4o-mini", "gpt-5"}
-
-
-def build_default_llm_configs():
-    return {
-        "默认配置": {
-            "id": str(uuid.uuid4()),
-            "api_key": "",
-            "base_url": "https://api.openai.com/v1",
-            "model_name": "gpt-4",
-            "temperature": 0.7,
-            "max_tokens": 8192,
-            "timeout": 600,
-            "interface_format": "OpenAI",
-            "created_at": datetime.datetime.now().isoformat()
-        },
-        "Grok 4.20": {
-            "id": str(uuid.uuid4()),
-            "api_key": "",
-            "base_url": GROK_DEFAULT_BASE_URL,
-            "model_name": GROK_DEFAULT_MODEL,
-            "temperature": 0.7,
-            "max_tokens": 8192,
-            "timeout": 600,
-            "interface_format": "Grok",
-            "created_at": datetime.datetime.now().isoformat()
-        }
-    }
 
 
 def create_label_with_help(self, parent, label_text, tooltip_key, row, column,
@@ -219,12 +196,14 @@ def build_ai_config_tab(self):
         if new_name != config_name:
             self.loaded_config["llm_configs"][new_name] = self.loaded_config["llm_configs"].pop(config_name)
             refresh_config_dropdown()
+        current_embedding_interface = normalize_embedding_interface(self.embedding_interface_format_var.get())
+        self.embedding_interface_format_var.set(current_embedding_interface)
         embedding_config = {
         "api_key": self.embedding_api_key_var.get(),
         "base_url": self.embedding_url_var.get(),
         "model_name": self.embedding_model_name_var.get(),
         "retrieval_k": self.safe_get_int(self.embedding_retrieval_k_var, 4),
-        "interface_format": self.embedding_interface_format_var.get().strip()
+        "interface_format": current_embedding_interface
 
         }
         other_params = {
@@ -240,7 +219,7 @@ def build_ai_config_tab(self):
             "scene_location": self.scene_location_var.get(),
             "time_constraint": self.time_constraint_var.get()
         }
-        self.loaded_config["embedding_configs"][self.embedding_interface_format_var.get().strip()] = embedding_config
+        self.loaded_config["embedding_configs"][current_embedding_interface] = embedding_config
         self.loaded_config["other_params"] = other_params
 
 
@@ -502,6 +481,7 @@ def build_ai_config_tab(self):
 
 def build_embeddings_config_tab(self):
     def on_embedding_interface_changed(new_value):
+        new_value = normalize_embedding_interface(new_value)
         self.embedding_interface_format_var.set(new_value)
         config_data = load_config(self.config_file)
         if config_data:
@@ -514,7 +494,12 @@ def build_embeddings_config_tab(self):
             self.embedding_model_name_var.set(emb_conf.get("model_name", ""))
             self.embedding_retrieval_k_var.set(str(emb_conf.get("retrieval_k", 4)))
         else:
-            if new_value == "Ollama":
+            if new_value == LOCAL_HASHING_EMBEDDING_INTERFACE:
+                self.embedding_api_key_var.set("")
+                self.embedding_url_var.set("")
+                self.embedding_model_name_var.set("local-hashing")
+                self.embedding_retrieval_k_var.set("4")
+            elif new_value == "Ollama":
                 self.embedding_url_var.set("http://localhost:11434/api")
             elif new_value == "ML Studio":
                 self.embedding_url_var.set("http://localhost:1234/v1")
@@ -523,8 +508,6 @@ def build_embeddings_config_tab(self):
                 self.embedding_model_name_var.set("text-embedding-ada-002")
             elif new_value == "Azure OpenAI":
                 self.embedding_url_var.set("https://[az].openai.azure.com/openai/deployments/[model]/embeddings?api-version=2023-05-15")
-            elif new_value == "DeepSeek":
-                self.embedding_url_var.set("https://api.deepseek.com/v1")
             elif new_value == "Gemini":
                 self.embedding_url_var.set("https://generativelanguage.googleapis.com/v1beta/")
                 self.embedding_model_name_var.set("models/text-embedding-004")
@@ -546,7 +529,8 @@ def build_embeddings_config_tab(self):
     # 2) Embedding 接口格式
     create_label_with_help(self, parent=self.embeddings_config_tab, label_text="Embedding 接口格式:", tooltip_key="embedding_intexrface_format", row=1, column=0, font=("Microsoft YaHei", 12))
 
-    emb_interface_options = ["DeepSeek", "OpenAI", "Azure OpenAI", "Gemini", "Ollama", "ML Studio","SiliconFlow"]
+    self.embedding_interface_format_var.set(normalize_embedding_interface(self.embedding_interface_format_var.get()))
+    emb_interface_options = EMBEDDING_INTERFACE_OPTIONS
 
     emb_interface_dropdown = ctk.CTkOptionMenu(self.embeddings_config_tab, values=emb_interface_options, variable=self.embedding_interface_format_var, command=on_embedding_interface_changed, font=("Microsoft YaHei", 12))
     emb_interface_dropdown.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
@@ -725,7 +709,10 @@ def load_config_btn(self):
     cfg = load_config(self.config_file)
     if cfg:
         last_llm = cfg.get("last_interface_format", "OpenAI")
-        last_embedding = cfg.get("last_embedding_interface_format", "OpenAI")
+        last_embedding = normalize_embedding_interface(cfg.get("last_embedding_interface_format", "OpenAI"))
+        if cfg.get("last_embedding_interface_format") != last_embedding:
+            cfg["last_embedding_interface_format"] = last_embedding
+            save_config(cfg, self.config_file)
         self.interface_format_var.set(last_llm)
         self.embedding_interface_format_var.set(last_embedding)
         llm_configs = cfg.get("llm_configs", {})
@@ -745,6 +732,12 @@ def load_config_btn(self):
             self.embedding_url_var.set(emb_conf.get("base_url", "https://api.openai.com/v1"))
             self.embedding_model_name_var.set(emb_conf.get("model_name", "text-embedding-ada-002"))
             self.embedding_retrieval_k_var.set(str(emb_conf.get("retrieval_k", 4)))
+        elif last_embedding == LOCAL_HASHING_EMBEDDING_INTERFACE:
+            emb_conf = get_default_embedding_config(last_embedding)
+            self.embedding_api_key_var.set(emb_conf["api_key"])
+            self.embedding_url_var.set(emb_conf["base_url"])
+            self.embedding_model_name_var.set(emb_conf["model_name"])
+            self.embedding_retrieval_k_var.set(str(emb_conf["retrieval_k"]))
         other_params = cfg.get("other_params", {})
         self.topic_text.delete("0.0", "end")
         self.topic_text.insert("0.0", other_params.get("topic", ""))
@@ -765,7 +758,8 @@ def load_config_btn(self):
 
 def save_config_btn(self):
     current_llm_interface = self.interface_format_var.get().strip()
-    current_embedding_interface = self.embedding_interface_format_var.get().strip()
+    current_embedding_interface = normalize_embedding_interface(self.embedding_interface_format_var.get())
+    self.embedding_interface_format_var.set(current_embedding_interface)
     llm_config = {
         "api_key": self.api_key_var.get(),
         "base_url": self.base_url_var.get(),

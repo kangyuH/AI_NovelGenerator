@@ -46,6 +46,13 @@
             "model_name": "text-embedding-ada-002",
             "retrieval_k": 4,
             "interface_format": "OpenAI"
+        },
+        "Local Hashing": {
+            "api_key": "",
+            "base_url": "",
+            "model_name": "local-hashing",
+            "retrieval_k": 4,
+            "interface_format": "Local Hashing"
         }
     },
     "other_params": {

@@ -5,6 +5,9 @@ import traceback
 from typing import List
 import requests
 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+from sklearn.feature_extraction.text import HashingVectorizer
+
+LOCAL_HASHING_EMBEDDING_DIM = 2048
 
 def ensure_openai_base_url_has_v1(url: str) -> str:
     """
@@ -28,6 +31,34 @@ class BaseEmbeddingAdapter:
 
     def embed_query(self, query: str) -> List[float]:
         raise NotImplementedError
+
+class LocalHashingEmbeddingAdapter(BaseEmbeddingAdapter):
+    """
+    本地 Hashing embedding 适配器。
+
+    这是一个轻量、无需 API 的兜底方案，适合只有 DeepSeek 等生成模型 API、
+    但仍希望启用本地向量检索的场景。它不是语义 embedding，只提供基于字符
+    n-gram 的相似度特征。
+    """
+    def __init__(self, model_name: str = "local-hashing"):
+        self.model_name = model_name or "local-hashing"
+        self._vectorizer = HashingVectorizer(
+            analyzer="char",
+            ngram_range=(2, 4),
+            n_features=LOCAL_HASHING_EMBEDDING_DIM,
+            alternate_sign=False,
+            norm="l2",
+            lowercase=False
+        )
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        if not texts:
+            return []
+        normalized_texts = [str(text or "") for text in texts]
+        return self._vectorizer.transform(normalized_texts).toarray().tolist()
+
+    def embed_query(self, query: str) -> List[float]:
+        return self.embed_documents([query])[0]
 
 class OpenAIEmbeddingAdapter(BaseEmbeddingAdapter):
     """
@@ -297,7 +328,9 @@ def create_embedding_adapter(
     工厂函数：根据 interface_format 返回不同的 embedding 适配器实例
     """
     fmt = interface_format.strip().lower()
-    if fmt == "openai":
+    if fmt in ("local hashing", "local", "hashing"):
+        return LocalHashingEmbeddingAdapter(model_name)
+    elif fmt == "openai":
         return OpenAIEmbeddingAdapter(api_key, base_url, model_name)
     elif fmt == "azure openai":
         return AzureOpenAIEmbeddingAdapter(api_key, base_url, model_name)

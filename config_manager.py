@@ -1,10 +1,218 @@
 # config_manager.py
 # -*- coding: utf-8 -*-
+import copy
+import datetime
 import json
 import os
 import threading
+import uuid
 from llm_adapters import create_llm_adapter
 from embedding_adapters import create_embedding_adapter
+
+LLM_INTERFACE_OPTIONS = ["OpenAI", "Azure OpenAI", "Ollama", "DeepSeek", "Gemini", "ML Studio", "Grok"]
+LOCAL_HASHING_EMBEDDING_INTERFACE = "Local Hashing"
+EMBEDDING_INTERFACE_OPTIONS = [
+    LOCAL_HASHING_EMBEDDING_INTERFACE,
+    "OpenAI",
+    "Azure OpenAI",
+    "Gemini",
+    "Ollama",
+    "ML Studio",
+    "SiliconFlow",
+]
+GROK_DEFAULT_BASE_URL = "https://api.x.ai/v1"
+GROK_DEFAULT_MODEL = "grok-4.20"
+OPENAI_DEFAULT_BASE_URLS = {"", "https://api.openai.com", "https://api.openai.com/v1"}
+OPENAI_DEFAULT_MODELS = {"", "gpt-4", "gpt-4o-mini", "gpt-5"}
+
+
+def normalize_embedding_interface(interface_format: str) -> str:
+    value = (interface_format or "").strip()
+    if value.lower() == "deepseek":
+        return LOCAL_HASHING_EMBEDDING_INTERFACE
+    return value or "OpenAI"
+
+
+def get_default_embedding_config(interface_format: str) -> dict:
+    interface_format = normalize_embedding_interface(interface_format)
+    if interface_format == LOCAL_HASHING_EMBEDDING_INTERFACE:
+        return {
+            "api_key": "",
+            "base_url": "",
+            "model_name": "local-hashing",
+            "retrieval_k": 4,
+            "interface_format": LOCAL_HASHING_EMBEDDING_INTERFACE,
+        }
+    return {
+        "api_key": "",
+        "base_url": "https://api.openai.com/v1",
+        "model_name": "text-embedding-ada-002",
+        "retrieval_k": 4,
+        "interface_format": interface_format,
+    }
+
+
+def build_default_llm_configs():
+    return {
+        "默认配置": {
+            "id": str(uuid.uuid4()),
+            "api_key": "",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-4",
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "timeout": 600,
+            "interface_format": "OpenAI",
+            "created_at": datetime.datetime.now().isoformat(),
+        },
+        "Grok 4.20": {
+            "id": str(uuid.uuid4()),
+            "api_key": "",
+            "base_url": GROK_DEFAULT_BASE_URL,
+            "model_name": GROK_DEFAULT_MODEL,
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "timeout": 600,
+            "interface_format": "Grok",
+            "created_at": datetime.datetime.now().isoformat(),
+        },
+    }
+
+
+DEFAULT_CONFIG = {
+    "last_interface_format": "OpenAI",
+    "last_embedding_interface_format": "OpenAI",
+    "llm_configs": {
+        "DeepSeek V3": {
+            "api_key": "",
+            "base_url": "https://api.deepseek.com/v1",
+            "model_name": "deepseek-chat",
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "timeout": 600,
+            "interface_format": "OpenAI",
+        },
+        "GPT 5": {
+            "api_key": "",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5",
+            "temperature": 0.7,
+            "max_tokens": 32768,
+            "timeout": 600,
+            "interface_format": "OpenAI",
+        },
+        "Gemini 2.5 Pro": {
+            "api_key": "",
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+            "model_name": "gemini-2.5-pro",
+            "temperature": 0.7,
+            "max_tokens": 32768,
+            "timeout": 600,
+            "interface_format": "OpenAI",
+        },
+        "Grok 4.20": {
+            "api_key": "",
+            "base_url": GROK_DEFAULT_BASE_URL,
+            "model_name": GROK_DEFAULT_MODEL,
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "timeout": 600,
+            "interface_format": "Grok",
+        },
+    },
+    "embedding_configs": {
+        "OpenAI": {
+            "api_key": "",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "text-embedding-ada-002",
+            "retrieval_k": 4,
+            "interface_format": "OpenAI",
+        },
+        LOCAL_HASHING_EMBEDDING_INTERFACE: {
+            "api_key": "",
+            "base_url": "",
+            "model_name": "local-hashing",
+            "retrieval_k": 4,
+            "interface_format": LOCAL_HASHING_EMBEDDING_INTERFACE,
+        },
+    },
+    "other_params": {
+        "topic": "",
+        "genre": "",
+        "num_chapters": 0,
+        "word_number": 0,
+        "filepath": "",
+        "chapter_num": "120",
+        "user_guidance": "",
+        "characters_involved": "",
+        "key_items": "",
+        "scene_location": "",
+        "time_constraint": "",
+    },
+    "choose_configs": {
+        "prompt_draft_llm": "DeepSeek V3",
+        "chapter_outline_llm": "DeepSeek V3",
+        "architecture_llm": "Gemini 2.5 Pro",
+        "final_chapter_llm": "GPT 5",
+        "consistency_review_llm": "DeepSeek V3",
+    },
+    "proxy_setting": {
+        "proxy_url": "127.0.0.1",
+        "proxy_port": "",
+        "enabled": False,
+    },
+    "webdav_config": {
+        "webdav_url": "",
+        "webdav_username": "",
+        "webdav_password": "",
+    },
+}
+
+
+def get_default_config() -> dict:
+    return copy.deepcopy(DEFAULT_CONFIG)
+
+
+def ensure_config_shape(config: dict) -> dict:
+    merged = get_default_config()
+    if isinstance(config, dict):
+        for key, value in config.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key].update(value)
+            else:
+                merged[key] = value
+
+    if not merged.get("llm_configs"):
+        merged["llm_configs"] = build_default_llm_configs()
+
+    embedding_configs = merged.setdefault("embedding_configs", {})
+    for name, emb_conf in list(embedding_configs.items()):
+        if isinstance(emb_conf, dict):
+            emb_conf["interface_format"] = normalize_embedding_interface(
+                emb_conf.get("interface_format", name)
+            )
+
+    last_embedding = normalize_embedding_interface(merged.get("last_embedding_interface_format", "OpenAI"))
+    merged["last_embedding_interface_format"] = last_embedding
+    embedding_configs.setdefault(last_embedding, get_default_embedding_config(last_embedding))
+
+    choose_configs = merged.setdefault("choose_configs", {})
+    config_names = list(merged["llm_configs"].keys())
+    if config_names:
+        for key in [
+            "prompt_draft_llm",
+            "chapter_outline_llm",
+            "architecture_llm",
+            "final_chapter_llm",
+            "consistency_review_llm",
+        ]:
+            if choose_configs.get(key) not in merged["llm_configs"]:
+                choose_configs[key] = config_names[0]
+
+    merged.setdefault("other_params", {})
+    merged.setdefault("proxy_setting", {})
+    merged.setdefault("webdav_config", {})
+    return merged
 
 
 def load_config(config_file: str) -> dict:
@@ -16,9 +224,9 @@ def load_config(config_file: str) -> dict:
 
     try:
         with open(config_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            return ensure_config_shape(json.load(f))
     except:
-            return {}
+            return ensure_config_shape({})
 
 
 # PenBo 增加了创建默认配置文件函数
@@ -72,6 +280,13 @@ def create_config(config_file: str) -> dict:
             "model_name": "text-embedding-ada-002",
             "retrieval_k": 4,
             "interface_format": "OpenAI"
+        },
+        "Local Hashing": {
+            "api_key": "",
+            "base_url": "",
+            "model_name": "local-hashing",
+            "retrieval_k": 4,
+            "interface_format": "Local Hashing"
         }
     },
     "other_params": {
@@ -106,6 +321,7 @@ def create_config(config_file: str) -> dict:
     }
 }
     save_config(config, config_file)
+    return ensure_config_shape(config)
 
 
 

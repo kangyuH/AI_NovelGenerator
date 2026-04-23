@@ -132,8 +132,9 @@ novel-generator/
 2. **Embedding模型配置**
    - `embedding_model_name`: 模型名称（如Ollama的nomic-embed-text）
    - `embedding_url`: 服务地址
-   - `embedding_retrieval_k`: 
-   - Grok目前只作为生成模型接入，不加入Embedding接口配置
+   - `embedding_retrieval_k`: 向量检索时返回的相似片段数量
+   - Grok、DeepSeek目前只作为生成模型接入，不加入官方Embedding接口配置
+   - 如果你手里只有DeepSeek API，可以将Embedding接口选择为`Local Hashing`，API Key和Base URL留空，模型名使用`local-hashing`。这是本地字符Hashing检索，不是真正语义Embedding，但能让RAG流程先跑通
 
 3. **小说参数配置**
    - `topic`: 核心故事主题
@@ -208,13 +209,14 @@ pyinstaller main.spec
 
 > **向量检索配置提示**  
 > 1. embedding模型需要显示指定接口和模型名称；
-> 2. 使用**本地Ollama**的**Embedding**时需提前启动Ollama服务：  
+> 2. 只有DeepSeek API时，Embedding可选择`Local Hashing`，无需额外服务或API Key；
+> 3. 使用**本地Ollama**的**Embedding**时需提前启动Ollama服务：
 >    ```bash
 >    ollama serve  # 启动服务
 >    ollama pull nomic-embed-text  # 下载/启用模型
 >    ```
-> 3. 切换不同Embedding模型后建议清空vectorstore目录
-> 4. 云端Embedding需确保对应API权限已开通
+> 4. 切换不同Embedding模型后建议清空vectorstore目录
+> 5. 云端Embedding需确保对应API权限已开通
 
 ---
 

@@ -136,7 +136,8 @@ novel-generator/
    - `embedding_model_name`: Embedding model name (e.g., Ollama's nomic-embed-text)
    - `embedding_url`: Service endpoint
    - `embedding_retrieval_k`: Number of nearest neighbors to retrieve
-   - Grok is supported as a generation model only; it is not added to the Embedding provider list.
+   - Grok and DeepSeek are supported as generation models only; they are not added as official Embedding providers.
+   - If you only have a DeepSeek API key, choose `Local Hashing` for Embedding, leave API Key and Base URL empty, and use `local-hashing` as the model name. This is local character-hashing retrieval rather than true semantic embedding, but it lets the RAG flow run without another provider.
 
 3. **Novel parameters**
    - `topic`: Core story theme
@@ -210,13 +211,14 @@ After packaging an executable (e.g., `main.exe` on Windows) will appear in the `
 
 > Vector retrieval tips:
 > 1. Explicitly set the embedding interface and model name.
-> 2. For local Ollama embeddings start the Ollama service first:
+> 2. If you only have a DeepSeek API key, choose `Local Hashing` for Embedding; it needs no extra service or API key.
+> 3. For local Ollama embeddings start the Ollama service first:
 >    ```bash
 >    ollama serve  # Start the service
 >    ollama pull nomic-embed-text  # Download/enable the model
 >    ```
-> 3. Clear the `vectorstore` directory after switching embedding models.
-> 4. For cloud embeddings ensure the API permissions are enabled.
+> 4. Clear the `vectorstore` directory after switching embedding models.
+> 5. For cloud embeddings ensure the API permissions are enabled.
 
 ---
 

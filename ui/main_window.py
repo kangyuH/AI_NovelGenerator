@@ -16,7 +16,7 @@ from tooltips import tooltips
 
 from ui.context_menu import TextWidgetContextMenu
 from ui.main_tab import build_main_tab, build_left_layout, build_right_layout
-from ui.config_tab import build_config_tabview, load_config_btn, save_config_btn
+from ui.config_tab import build_config_tabview, load_config_btn, save_config_btn, normalize_embedding_interface, get_default_embedding_config
 from ui.novel_params_tab import build_novel_params_area, build_optional_buttons_area
 from ui.generation_handlers import (
     generate_novel_architecture_ui,
@@ -58,7 +58,7 @@ class NovelGeneratorGUI:
         if self.loaded_config:
             last_llm = next(iter(self.loaded_config["llm_configs"].values())).get("interface_format", "OpenAI")
 
-            last_embedding = self.loaded_config.get("last_embedding_interface_format", "OpenAI")
+            last_embedding = normalize_embedding_interface(self.loaded_config.get("last_embedding_interface_format", "OpenAI"))
         else:
             last_llm = "OpenAI"
             last_embedding = "OpenAI"
@@ -81,12 +81,7 @@ class NovelGeneratorGUI:
         if self.loaded_config and "embedding_configs" in self.loaded_config and last_embedding in self.loaded_config["embedding_configs"]:
             emb_conf = self.loaded_config["embedding_configs"][last_embedding]
         else:
-            emb_conf = {
-                "api_key": "",
-                "base_url": "https://api.openai.com/v1",
-                "model_name": "text-embedding-ada-002",
-                "retrieval_k": 4
-            }
+            emb_conf = get_default_embedding_config(last_embedding)
 
         # PenBo 增加代理功能支持
         proxy_url = self.loaded_config["proxy_setting"]["proxy_url"]
