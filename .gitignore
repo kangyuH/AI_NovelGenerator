@@ -11,8 +11,10 @@ __pycache__/
 /example
 config.json
 config_test.json
+.env
 .idea/
 /novel
+/save_path
 app.log
 test.py
 /backup
