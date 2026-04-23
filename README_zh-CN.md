@@ -41,7 +41,7 @@
 - **Python 3.9+** 运行环境（推荐3.10-3.12之间）
 - **pip** 包管理工具
 - 有效API密钥：
-  - 云端服务：OpenAI / DeepSeek 等
+  - 云端服务：OpenAI / DeepSeek / Grok(xAI) 等
   - 本地服务：Ollama 等兼容 OpenAI 的接口
 
 ---
@@ -122,10 +122,10 @@ novel-generator/
 
 ### 🔧 配置说明
 1. **生成模型配置**
-   - `api_key`: 大模型服务的API密钥
-   - `base_url`: API终端地址（本地服务填Ollama等地址）
-   - `interface_format`: 接口模式
-   - `model_name`: 主生成模型名称（如gpt-4, claude-3等）
+   - `api_key`: 大模型服务的API密钥（使用Grok时填写xAI API Key）
+   - `base_url`: API终端地址（OpenAI为`https://api.openai.com/v1`，Grok为`https://api.x.ai/v1`，本地服务填Ollama等地址）
+   - `interface_format`: 接口模式，可选OpenAI、DeepSeek、Gemini、Ollama、ML Studio、Grok等
+   - `model_name`: 主生成模型名称（如gpt-4, claude-3、grok-4.20等）
    - `temperature`: 创意度参数（0-1，越高越有创造性）
    - `max_tokens`: 模型最大回复长度
 
@@ -133,6 +133,7 @@ novel-generator/
    - `embedding_model_name`: 模型名称（如Ollama的nomic-embed-text）
    - `embedding_url`: 服务地址
    - `embedding_retrieval_k`: 
+   - Grok目前只作为生成模型接入，不加入Embedding接口配置
 
 3. **小说参数配置**
    - `topic`: 核心故事主题

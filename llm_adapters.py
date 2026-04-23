@@ -352,12 +352,12 @@ class SiliconFlowAdapter(BaseLLMAdapter):
 # grok實現
 class GrokAdapter(BaseLLMAdapter):
     """
-    适配 xAI Grok API
+    适配 xAI Grok API (Responses API)
     """
     def __init__(self, api_key: str, base_url: str, model_name: str, max_tokens: int, temperature: float = 0.7, timeout: Optional[int] = 600):
-        self.base_url = check_base_url(base_url)
+        self.base_url = check_base_url(base_url or "https://api.x.ai/v1")
         self.api_key = api_key
-        self.model_name = model_name
+        self.model_name = (model_name or "").strip() or "grok-4.20"
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.timeout = timeout
@@ -368,20 +368,47 @@ class GrokAdapter(BaseLLMAdapter):
             timeout=self.timeout
         )
 
+    @staticmethod
+    def _get_value(obj, key, default=None):
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    def _extract_response_text(self, response) -> str:
+        output_text = self._get_value(response, "output_text")
+        if output_text:
+            return str(output_text)
+
+        output = self._get_value(response, "output", []) or []
+        parts = []
+        for item in output:
+            item_type = self._get_value(item, "type")
+            if item_type and item_type != "message":
+                continue
+
+            content_items = self._get_value(item, "content", []) or []
+            for content_item in content_items:
+                text = self._get_value(content_item, "text")
+                if text:
+                    parts.append(str(text))
+
+        return "\n".join(parts).strip()
+
     def invoke(self, prompt: str) -> str:
         try:
-            response = self._client.chat.completions.create(
+            response = self._client.responses.create(
                 model=self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are Grok, created by xAI."},
+                input=[
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=self.max_tokens,
+                max_output_tokens=self.max_tokens,
                 temperature=self.temperature,
+                store=False,
                 timeout=self.timeout
             )
-            if response and response.choices:
-                return response.choices[0].message.content
+            response_text = self._extract_response_text(response)
+            if response_text:
+                return response_text
             else:
                 logging.warning("No response from GrokAdapter.")
                 return ""

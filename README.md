@@ -43,7 +43,7 @@ Ensure the environment meets the following requirements:
 - **Python 3.9+** (recommended 3.10–3.12)
 - **pip** package manager
 - Valid API keys:
-   - Cloud services: OpenAI / DeepSeek, etc.
+   - Cloud services: OpenAI / DeepSeek / Grok (xAI), etc.
    - Local services: Ollama or other OpenAI-compatible interfaces
 
 ---
@@ -125,10 +125,10 @@ novel-generator/
 
 ### 🔧 Explanation
 1. **Generation model configuration**
-   - `api_key`: API key for the LLM service
-   - `base_url`: API endpoint (for local services use the Ollama address)
-   - `interface_format`: Interface mode
-   - `model_name`: Main generation model (e.g., gpt-4, claude-3)
+   - `api_key`: API key for the LLM service (use an xAI API key for Grok)
+   - `base_url`: API endpoint (`https://api.openai.com/v1` for OpenAI, `https://api.x.ai/v1` for Grok, or an Ollama endpoint for local services)
+   - `interface_format`: Interface mode, such as OpenAI, DeepSeek, Gemini, Ollama, ML Studio, or Grok
+   - `model_name`: Main generation model (e.g., gpt-4, claude-3, grok-4.20)
    - `temperature`: Creativity parameter (0–1, higher is more creative)
    - `max_tokens`: Maximum model response length
 
@@ -136,6 +136,7 @@ novel-generator/
    - `embedding_model_name`: Embedding model name (e.g., Ollama's nomic-embed-text)
    - `embedding_url`: Service endpoint
    - `embedding_retrieval_k`: Number of nearest neighbors to retrieve
+   - Grok is supported as a generation model only; it is not added to the Embedding provider list.
 
 3. **Novel parameters**
    - `topic`: Core story theme

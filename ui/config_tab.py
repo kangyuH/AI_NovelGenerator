@@ -12,6 +12,40 @@ from tooltips import tooltips
 import os
 
 
+LLM_INTERFACE_OPTIONS = ["OpenAI", "Azure OpenAI", "Ollama", "DeepSeek", "Gemini", "ML Studio", "Grok"]
+GROK_DEFAULT_BASE_URL = "https://api.x.ai/v1"
+GROK_DEFAULT_MODEL = "grok-4.20"
+OPENAI_DEFAULT_BASE_URLS = {"", "https://api.openai.com", "https://api.openai.com/v1"}
+OPENAI_DEFAULT_MODELS = {"", "gpt-4", "gpt-4o-mini", "gpt-5"}
+
+
+def build_default_llm_configs():
+    return {
+        "默认配置": {
+            "id": str(uuid.uuid4()),
+            "api_key": "",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-4",
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "timeout": 600,
+            "interface_format": "OpenAI",
+            "created_at": datetime.datetime.now().isoformat()
+        },
+        "Grok 4.20": {
+            "id": str(uuid.uuid4()),
+            "api_key": "",
+            "base_url": GROK_DEFAULT_BASE_URL,
+            "model_name": GROK_DEFAULT_MODEL,
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "timeout": 600,
+            "interface_format": "Grok",
+            "created_at": datetime.datetime.now().isoformat()
+        }
+    }
+
+
 def create_label_with_help(self, parent, label_text, tooltip_key, row, column,
                            font=None, sticky="e", padx=5, pady=5):
     """
@@ -59,6 +93,19 @@ def build_config_tabview(self):
     build_proxy_setting_tab(self)
 
 def build_ai_config_tab(self):
+    def apply_llm_interface_defaults(interface_format):
+        if interface_format.strip().lower() != "grok":
+            return
+
+        if self.base_url_var.get().strip() in OPENAI_DEFAULT_BASE_URLS:
+            self.base_url_var.set(GROK_DEFAULT_BASE_URL)
+        if self.model_name_var.get().strip() in OPENAI_DEFAULT_MODELS:
+            self.model_name_var.set(GROK_DEFAULT_MODEL)
+
+    def on_llm_interface_changed(new_value):
+        self.interface_format_var.set(new_value)
+        apply_llm_interface_defaults(new_value)
+
     def refresh_config_dropdown():
         """刷新配置下拉菜单"""
         config_names = list(self.loaded_config.get("llm_configs", {}).keys())
@@ -78,6 +125,7 @@ def build_ai_config_tab(self):
             self.max_tokens_var.set(int(config.get("max_tokens", 8192)))
             self.timeout_var.set(int(config.get("timeout", 600)))
             self.interface_format_var.set(config.get("interface_format", "OpenAI"))
+            apply_llm_interface_defaults(self.interface_format_var.get())
             
             # 更新显示标签
             self.temp_value_label.configure(text=f"{float(config.get('temperature', 0.7)):.2f}")
@@ -246,20 +294,8 @@ def build_ai_config_tab(self):
     create_label_with_help(self, self.ai_config_tab, "当前配置", "interface_config", 0, 0)
     config_names = list(self.loaded_config.get("llm_configs", {}).keys())
     if not config_names:
-        self.loaded_config["llm_configs"] = {
-            "默认配置": {
-                "id": str(uuid.uuid4()),
-                "api_key": "",
-                "base_url": "https://api.openai.com/v1",
-                "model_name": "gpt-4",
-                "temperature": 0.7,
-                "max_tokens": 8192,
-                "timeout": 600,
-                "interface_format": "OpenAI",
-                "created_at": datetime.datetime.now().isoformat()
-            }
-        }
-        config_names = ["默认配置"]
+        self.loaded_config["llm_configs"] = build_default_llm_configs()
+        config_names = list(self.loaded_config["llm_configs"].keys())
     
     self.interface_config_var = ctk.StringVar(value=config_names[0])
 
@@ -346,11 +382,11 @@ def build_ai_config_tab(self):
     # 3) 接口格式
     create_label_with_help(self, self.ai_config_tab, "接口格式:", "interface_format", row_start+2, 0)
     self.interface_format_var = ctk.StringVar(value="OpenAI")
-    interface_options = ["OpenAI", "Azure OpenAI", "Ollama", "DeepSeek", "Gemini", "ML Studio"]
     interface_dropdown = ctk.CTkOptionMenu(
         self.ai_config_tab,
-        values=interface_options,
+        values=LLM_INTERFACE_OPTIONS,
         variable=self.interface_format_var,
+        command=on_llm_interface_changed,
         font=("Microsoft YaHei", 12)
     )
     interface_dropdown.grid(row=row_start+2, column=1, columnspan=2, padx=5, pady=5, sticky="nsew")
@@ -452,20 +488,8 @@ def build_ai_config_tab(self):
     create_label_with_help(self, self.ai_config_tab, "当前配置", "interface_config", 0, 0)
     config_names = list(self.loaded_config.get("llm_configs", {}).keys())
     if not config_names:  # 如果没有配置，创建一个默认配置
-        self.loaded_config["llm_configs"] = {
-            "默认配置": {
-                "id": str(uuid.uuid4()),
-                "api_key": "",
-                "base_url": "https://api.openai.com/v1",
-                "model_name": "gpt-4",
-                "temperature": 0.7,
-                "max_tokens": 8192,
-                "timeout": 600,
-                "interface_format": "OpenAI",
-                "created_at": datetime.datetime.now().isoformat()
-            }
-        }
-        config_names = ["默认配置"]
+        self.loaded_config["llm_configs"] = build_default_llm_configs()
+        config_names = list(self.loaded_config["llm_configs"].keys())
     
     interface_config_dropdown = ctk.CTkOptionMenu(
         self.ai_config_tab, 
